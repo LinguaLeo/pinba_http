@@ -3,6 +3,7 @@
 from cgi import parse_qs
 from socket import socket, gethostname, AF_INET, SOCK_DGRAM
 from sys import argv
+from pprint import pprint
 
 import re
 import pinba_pb2
@@ -12,6 +13,9 @@ VERSION = 1.1
 # For work we need set PINBA_HOST,PINBA_PORT value in file uswgi_params,this file located in folder nginx 
 # Additional parameter PINBA_DEBUG_MODE set in uswgi_params
 
+
+DEFAULT_PINBA_HOST = '127.0.0.1'
+DEFAULT_PINBA_PORT = 30002
 TIMER_MAX = 10*60
 
 udpsock = socket(AF_INET, SOCK_DGRAM)
@@ -87,28 +91,51 @@ def generic(prefix, environ):
         timer = float(tags.pop('t')[0])
     except KeyError:
         timer = 0.0
-    pinba_host = environ['PINBA_HOST']
-    pinba_port = environ['PINBA_PORT'] 
+
+    if ('PINBA_HOST' in environ) and (environ['PINBA_HOST'] != ''):
+      pinba_host = environ['PINBA_HOST']
+    else:
+      pinba_host = DEFAULT_PINBA_HOST
+    pprint(environ)
+    if ('PINBA_PORT' in environ) and (environ['PINBA_PORT'] != ''):
+      pinba_port = environ['PINBA_PORT']
+    else:
+      pinba_port = DEFAULT_PINBA_PORT
+   
     if ('PINBA_DEBUG_MODE' in environ) and (environ['PINBA_DEBUG_MODE'] == '1'):
-       str_params = 'Params :' + '\n'
-       str_params = str_params + 'PINBA_HOST: ' + str(pinba_host) + '\n'
+       print('Params :');
+       print('PINBA_HOST:')
+       pprint(pinba_host);
+       print('PINBAPORT:');
+       pprint(pinba_port);
+       print('server_name:');
+       pprint(environ['HTTP_HOST']);
+       print('tracker:');
+       pprint(tracker);
+       print('timer:');
+       pprint(timer);
+       print('tags:');
+       pprint(tags);
+       """    
+  str_params = str_params + 'PINBA_HOST: ' + str(pinba_host) + '\n'
        str_params = str_params + 'PINBA_PORT: ' + str(pinba_port) + '\n'
        str_params = str_params + 'server_name: ' + environ['HTTP_HOST'] + '\n'; 
        str_params = str_params + 'tracker:' + tracker + '\n'
        str_params = str_params + 'timer: ' + str(timer) + '\n' 
-       str_params = str_params + 'tags: ' + get_array_string(tags) + '\n' 
+#       var_dump(tags); 
+#      str_params = str_params + 'tags: ' + var_dump(tags) + '\n' 
        print str_params  
+      """
     pinba(environ['HTTP_HOST'], tracker, timer, tags, pinba_host, pinba_port)
 
 # Simple routing
 handlers = {
     "/track/": generic
 }
-def get_array_string(array):
-  res = ''
-  for key in array:
-     res = res + key + str(array[key]) + ','
-  return res   
+#  res = ''
+#  for key in array:
+#     res = res + key + str(array[key]) + ','
+#  return res   
 
 def app(environ, start_response):
     for h in handlers:
