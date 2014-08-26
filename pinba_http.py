@@ -11,7 +11,6 @@ import pinba_pb2
 # You should set PINBA_HOST, PINBA_PORT values for uwsgi configuration 
 # Also you can set PINBA_DEBUG for debugging
 
-VERSION = 1.1
 DEFAULT_PINBA_HOST = '127.0.0.1'
 DEFAULT_PINBA_PORT = 30002
 TIMER_MAX = 10*60
