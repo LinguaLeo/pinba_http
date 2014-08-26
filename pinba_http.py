@@ -116,16 +116,6 @@ def generic(prefix, environ):
        pprint(timer);
        print('tags:');
        pprint(tags);
-       """    
-  str_params = str_params + 'PINBA_HOST: ' + str(pinba_host) + '\n'
-       str_params = str_params + 'PINBA_PORT: ' + str(pinba_port) + '\n'
-       str_params = str_params + 'server_name: ' + environ['HTTP_HOST'] + '\n'; 
-       str_params = str_params + 'tracker:' + tracker + '\n'
-       str_params = str_params + 'timer: ' + str(timer) + '\n' 
-#       var_dump(tags); 
-#      str_params = str_params + 'tags: ' + var_dump(tags) + '\n' 
-       print str_params  
-      """
     pinba(environ['HTTP_HOST'], tracker, timer, tags, pinba_host, pinba_port)
 
 # Simple routing
