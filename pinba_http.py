@@ -5,12 +5,12 @@ from socket import socket, gethostname, AF_INET, SOCK_DGRAM
 from sys import argv
 
 import re
-import logging
 import pinba_pb2
 
 VERSION = 1.1
 
 # For work we need set PINBA_HOST,PINBA_PORT value in file uswgi_params,this file located in folder nginx 
+# Additional parameter PINBA_DEBUG_MODE set in uswgi_params
 
 TIMER_MAX = 10*60
 
@@ -20,7 +20,7 @@ hostname = gethostname()
 class InvalidTimer(Exception):
     pass
 
-def pinba(server_name, tracker, timer, tags,pinba_host,pinba_port):
+def pinba(server_name, tracker, timer, tags, pinba_host, pinba_port):
     """
     Send a message to Pinba.
 
@@ -31,7 +31,6 @@ def pinba(server_name, tracker, timer, tags,pinba_host,pinba_port):
     :param pinba_host:  pinba host
     :param pinba_port:  pinba port
     """    
-
     if timer < 0 or timer > TIMER_MAX:
         raise InvalidTimer()
 
@@ -90,30 +89,26 @@ def generic(prefix, environ):
         timer = 0.0
     pinba_host = environ['PINBA_HOST']
     pinba_port = environ['PINBA_PORT'] 
-    """
-    logging.basicConfig(filename='pinba-http.log',level=logging.INFO)
-    str_params = 'Params :' + '\n'
-    str_params = str_params + 'PINBA_HOST: ' + str(pinba_host) + '\n'
-    str_params = str_params + 'PINBA_PORT: ' + str(pinba_port) + '\n'
-    str_params = str_params + 'server_name: ' + environ['HTTP_HOST'] + '\n'; 
-    str_params = str_params + 'tracker:' + tracker + '\n'
-    str_params = str_params + 'timer: ' + str(timer) + '\n' 
-    str_params = str_params + 'tags: ' + get_array_string(tags) + '\n' 
-    logging.info(str_params)
-    """  
-    pinba(environ['HTTP_HOST'], tracker, timer, tags,pinba_host,pinba_port)
+    if ('PINBA_DEBUG_MODE' in environ) and (environ['PINBA_DEBUG_MODE'] == '1'):
+       str_params = 'Params :' + '\n'
+       str_params = str_params + 'PINBA_HOST: ' + str(pinba_host) + '\n'
+       str_params = str_params + 'PINBA_PORT: ' + str(pinba_port) + '\n'
+       str_params = str_params + 'server_name: ' + environ['HTTP_HOST'] + '\n'; 
+       str_params = str_params + 'tracker:' + tracker + '\n'
+       str_params = str_params + 'timer: ' + str(timer) + '\n' 
+       str_params = str_params + 'tags: ' + get_array_string(tags) + '\n' 
+       print str_params  
+    pinba(environ['HTTP_HOST'], tracker, timer, tags, pinba_host, pinba_port)
 
 # Simple routing
 handlers = {
     "/track/": generic
 }
-"""
 def get_array_string(array):
   res = ''
   for key in array:
      res = res + key + str(array[key]) + ','
   return res   
-"""
 
 def app(environ, start_response):
     for h in handlers:
@@ -121,7 +116,7 @@ def app(environ, start_response):
             try:
                 handlers[h](h, environ)
             except InvalidTimer:
-                start_response('400 Invalid Timer', [('Content-Length', 0)])
+                start_response('400 Invalid Timer', [('Content-Length', '0')])
                 return ['']
             start_response('200 OK', [('Content-Length', '0')])
             return ['']
