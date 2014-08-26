@@ -77,13 +77,23 @@ def pinba(server_name, tracker, timer, tags, pinba_host, pinba_port):
     udpsock.sendto(msg.SerializeToString(), (pinba_host, pinba_port))
 
 def get_option(environ, name, default)
+    """
+    Returns a value by name from "environ" parameter.
+    
+    :param environ: any dictionary
+    :param name:    a search key
+    :param default: value for undefined key
+    """
     if (name in environ) and (environ[name] != ''):
         return environ[name]
     return default
 
 def print_debug(values)
+    """
+    Print values to stdout.
+    """
     print('Debug values')
-    for key, value in d.iteritems():
+    for key, value in values.items():
         print(key + ':')
         pprint(value)
 
