@@ -8,12 +8,10 @@ from pprint import pprint
 import re
 import pinba_pb2
 
+# You should set PINBA_HOST, PINBA_PORT values for uwsgi configuration 
+# Also you can set PINBA_DEBUG for debugging
+
 VERSION = 1.1
-
-# For work we need set PINBA_HOST,PINBA_PORT value in file uswgi_params,this file located in folder nginx 
-# Additional parameter PINBA_DEBUG_MODE set in uswgi_params
-
-
 DEFAULT_PINBA_HOST = '127.0.0.1'
 DEFAULT_PINBA_PORT = 30002
 TIMER_MAX = 10*60
@@ -78,6 +76,17 @@ def pinba(server_name, tracker, timer, tags, pinba_host, pinba_port):
     # Send message to Pinba server
     udpsock.sendto(msg.SerializeToString(), (pinba_host, pinba_port))
 
+def get_option(environ, name, default)
+    if (name in environ) and (environ[name] != ''):
+        return environ[name]
+    return default
+
+def print_debug(values)
+    print('Debug values')
+    for key, value in d.iteritems():
+        print(key + ':')
+        pprint(value)
+
 def generic(prefix, environ):
     """
     Generic Pinba handler.
@@ -85,47 +94,32 @@ def generic(prefix, environ):
     The timer is in `t` and other parameters are considered to be
     additional tags. The tracker name is the end of the path.
     """
-    tracker = environ["PATH_INFO"][len(prefix):]
+    tracker = environ['PATH_INFO'][len(prefix):]
     tags = parse_qs(environ['QUERY_STRING'])
     try:
         timer = float(tags.pop('t')[0])
     except KeyError:
         timer = 0.0
 
-    if ('PINBA_HOST' in environ) and (environ['PINBA_HOST'] != ''):
-      pinba_host = environ['PINBA_HOST']
-    else:
-      pinba_host = DEFAULT_PINBA_HOST
-    pprint(environ)
-    if ('PINBA_PORT' in environ) and (environ['PINBA_PORT'] != ''):
-      pinba_port = environ['PINBA_PORT']
-    else:
-      pinba_port = DEFAULT_PINBA_PORT
+    pinba_host = get_option(environ, 'PINBA_HOST', DEFAULT_PINBA_HOST)
+    pinba_port = get_option(environ, 'PINBA_PORT', DEFAULT_PINBA_PORT)
    
-    if ('PINBA_DEBUG_MODE' in environ) and (environ['PINBA_DEBUG_MODE'] == '1'):
-       print('Params :');
-       print('PINBA_HOST:')
-       pprint(pinba_host);
-       print('PINBAPORT:');
-       pprint(pinba_port);
-       print('server_name:');
-       pprint(environ['HTTP_HOST']);
-       print('tracker:');
-       pprint(tracker);
-       print('timer:');
-       pprint(timer);
-       print('tags:');
-       pprint(tags);
+    if ('PINBA_DEBUG' in environ) and (environ['PINBA_DEBUG'] == '1'):
+        print_debug({
+            'pinba_host': pinba_host,
+            'pinba_port': pinba_port,
+            'server_name': environ['HTTP_HOST'],
+            'tracket': tracker,
+            'timer': timer,
+            'tags': tags
+        })
+        
     pinba(environ['HTTP_HOST'], tracker, timer, tags, pinba_host, pinba_port)
 
 # Simple routing
 handlers = {
-    "/track/": generic
-}
-#  res = ''
-#  for key in array:
-#     res = res + key + str(array[key]) + ','
-#  return res   
+    '/track/': generic
+}   
 
 def app(environ, start_response):
     for h in handlers:
