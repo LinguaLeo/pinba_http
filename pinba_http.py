@@ -111,7 +111,8 @@ def generic(prefix, environ):
         timer = 0.0
 
     pinba_host = get_option(environ, 'PINBA_HOST', DEFAULT_PINBA_HOST)
-    pinba_port = get_option(environ, 'PINBA_PORT', DEFAULT_PINBA_PORT)
+    pinba_port = int(get_option(environ, 'PINBA_PORT', DEFAULT_PINBA_PORT))
+    
     if ('PINBA_DEBUG' in environ) and (environ['PINBA_DEBUG'] == '1'):
         print_debug({
             'pinba_host': pinba_host,
