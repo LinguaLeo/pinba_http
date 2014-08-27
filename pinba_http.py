@@ -75,7 +75,7 @@ def pinba(server_name, tracker, timer, tags, pinba_host, pinba_port):
     # Send message to Pinba server
     udpsock.sendto(msg.SerializeToString(), (pinba_host, pinba_port))
 
-def get_option(environ, name, default)
+def get_option(environ, name, default):
     """
     Returns a value by name from "environ" parameter.
     
@@ -87,7 +87,7 @@ def get_option(environ, name, default)
         return environ[name]
     return default
 
-def print_debug(values)
+def print_debug(values):
     """
     Print values to stdout.
     """
@@ -112,7 +112,6 @@ def generic(prefix, environ):
 
     pinba_host = get_option(environ, 'PINBA_HOST', DEFAULT_PINBA_HOST)
     pinba_port = get_option(environ, 'PINBA_PORT', DEFAULT_PINBA_PORT)
-   
     if ('PINBA_DEBUG' in environ) and (environ['PINBA_DEBUG'] == '1'):
         print_debug({
             'pinba_host': pinba_host,
