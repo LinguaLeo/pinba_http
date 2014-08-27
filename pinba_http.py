@@ -3,12 +3,16 @@
 from cgi import parse_qs
 from socket import socket, gethostname, AF_INET, SOCK_DGRAM
 from sys import argv
+from pprint import pprint
+
 import re
 import pinba_pb2
 
-VERSION = 1.1
-PINBA_HOST = '127.0.0.1'
-PINBA_PORT = 30002
+# You should set PINBA_HOST, PINBA_PORT values for uwsgi configuration 
+# Also you can set PINBA_DEBUG for debugging
+
+DEFAULT_PINBA_HOST = '127.0.0.1'
+DEFAULT_PINBA_PORT = 30002
 TIMER_MAX = 10*60
 
 udpsock = socket(AF_INET, SOCK_DGRAM)
@@ -17,7 +21,7 @@ hostname = gethostname()
 class InvalidTimer(Exception):
     pass
 
-def pinba(server_name, tracker, timer, tags):
+def pinba(server_name, tracker, timer, tags, pinba_host, pinba_port):
     """
     Send a message to Pinba.
 
@@ -25,7 +29,9 @@ def pinba(server_name, tracker, timer, tags):
     :param tracker:     tracker name
     :param timer:       timer value in seconds
     :param tags:        dictionary of tags
-    """
+    :param pinba_host:  pinba host
+    :param pinba_port:  pinba port
+    """    
     if timer < 0 or timer > TIMER_MAX:
         raise InvalidTimer()
 
@@ -67,7 +73,28 @@ def pinba(server_name, tracker, timer, tags):
         msg.dictionary.extend(dictionary);
 
     # Send message to Pinba server
-    udpsock.sendto(msg.SerializeToString(), (PINBA_HOST, PINBA_PORT))
+    udpsock.sendto(msg.SerializeToString(), (pinba_host, pinba_port))
+
+def get_option(environ, name, default):
+    """
+    Returns a value by name from "environ" parameter.
+    
+    :param environ: any dictionary
+    :param name:    a search key
+    :param default: value for undefined key
+    """
+    if (name in environ) and (environ[name] != ''):
+        return environ[name]
+    return default
+
+def print_debug(values):
+    """
+    Print values to stdout.
+    """
+    print('Debug values')
+    for key, value in values.items():
+        print(key + ':')
+        pprint(value)
 
 def generic(prefix, environ):
     """
@@ -76,62 +103,31 @@ def generic(prefix, environ):
     The timer is in `t` and other parameters are considered to be
     additional tags. The tracker name is the end of the path.
     """
-    tracker = environ["PATH_INFO"][len(prefix):]
+    tracker = environ['PATH_INFO'][len(prefix):]
     tags = parse_qs(environ['QUERY_STRING'])
     try:
         timer = float(tags.pop('t')[0])
     except KeyError:
         timer = 0.0
-    pinba(environ['HTTP_HOST'], tracker, timer, tags)
 
-class Boomerang(object):
-    """
-    Handler for Yahoo Boomerang.
-
-    https://github.com/yahoo/boomerang
-
-    Parameters matching `.?t_` are considered as timestamps, except
-    `t_resp`, `t_page` and `t_done`. Timestamps are transformed into
-    timers by making the difference with `nt_nav_st`.
-    """
-
-    def __init__(self):
-        self.timestamps_re = re.compile("^.?t_")
-
-    def is_timer(self, name):
-        """Is it a timer in milliseconds?"""
-        return name in ["t_resp", "t_page", "t_done"]
-
-    def is_timestamp(self, name):
-        """Is it a timestamp in milliseconds?"""
-        if self.timestamps_re.match(name) and not self.is_timer(name):
-            return True
-        return False
-
-    def __call__(self, prefix, environ):
-        tags = parse_qs(environ['QUERY_STRING'])
-        try:
-            # Start point for other timestamps
-            start = int(tags.pop("nt_nav_st")[0])
-        except KeyError:
-            raise InvalidTimer
-        timers = {}
-        for t in tags.keys()[:]:
-            if self.is_timer(t):
-                timers[t] = int(tags.pop(t)[0])
-            elif self.is_timestamp(t):
-                val = int(tags.pop(t)[0]) - start
-                if val < 0:
-                    continue
-                timers[t] = val
-        for t in timers:
-            pinba(environ['HTTP_HOST'], "boomerang.%s" % t, timers[t]/1000., tags)
+    pinba_host = get_option(environ, 'PINBA_HOST', DEFAULT_PINBA_HOST)
+    pinba_port = get_option(environ, 'PINBA_PORT', DEFAULT_PINBA_PORT)
+    if ('PINBA_DEBUG' in environ) and (environ['PINBA_DEBUG'] == '1'):
+        print_debug({
+            'pinba_host': pinba_host,
+            'pinba_port': pinba_port,
+            'server_name': environ['HTTP_HOST'],
+            'tracket': tracker,
+            'timer': timer,
+            'tags': tags
+        })
+        
+    pinba(environ['HTTP_HOST'], tracker, timer, tags, pinba_host, pinba_port)
 
 # Simple routing
 handlers = {
-    "/track/": generic,
-    "/track-boomerang/": Boomerang()
-}
+    '/track/': generic
+}   
 
 def app(environ, start_response):
     for h in handlers:
@@ -139,9 +135,9 @@ def app(environ, start_response):
             try:
                 handlers[h](h, environ)
             except InvalidTimer:
-                start_response('400 Invalid Timer', [('Content-Length', 0)])
+                start_response('400 Invalid Timer', [('Content-Length', '0')])
                 return ['']
-            start_response('200 OK', [('Content-Length', 0)])
+            start_response('200 OK', [('Content-Length', '0')])
             return ['']
-    start_response('404 Not Found', [('Content-Length', 0)])
+    start_response('404 Not Found', [('Content-Length', '0')])
     return ['']
